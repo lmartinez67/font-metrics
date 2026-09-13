@@ -62,6 +62,24 @@ func report(w io.Writer, f *Font) error {
 	fmt.Fprintf(w, "line gap:        %d\n", hhea.LineGap)
 	fmt.Fprintf(w, "glyphs:          %d\n", numGlyphs)
 	fmt.Fprintf(w, "bounding box:    [%d %d %d %d]\n", head.XMin, head.YMin, head.XMax, head.YMax)
+
+	// OS/2 is common but optional in the sfnt spec, so a font missing it
+	// just gets fewer lines in the report rather than an error.
+	if f.HasTable("OS/2") {
+		os2, err := f.OS2()
+		if err != nil {
+			return err
+		}
+		if name := WeightClassName(os2.WeightClass); name != "" {
+			fmt.Fprintf(w, "weight class:    %d (%s)\n", os2.WeightClass, name)
+		} else {
+			fmt.Fprintf(w, "weight class:    %d\n", os2.WeightClass)
+		}
+		if os2.HasXHeight {
+			fmt.Fprintf(w, "x-height:        %d\n", os2.XHeight)
+			fmt.Fprintf(w, "cap height:      %d\n", os2.CapHeight)
+		}
+	}
 	return nil
 }
 

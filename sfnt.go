@@ -151,3 +151,67 @@ func (f *Font) NumGlyphs() (uint16, error) {
 	}
 	return binary.BigEndian.Uint16(t[4:6]), nil
 }
+
+// HasTable reports whether the font's directory lists the given tag.
+// OS/2 in particular is common but not required by the sfnt spec, so
+// callers need to check before treating its absence as an error.
+func (f *Font) HasTable(tag string) bool {
+	_, ok := f.tables[tag]
+	return ok
+}
+
+// OS2Metrics is the subset of the "OS/2" table we report. XHeight and
+// CapHeight are only present in table version 2 and later; HasXHeight
+// tells the caller whether they were actually read from the file rather
+// than left at their zero value.
+type OS2Metrics struct {
+	Version            uint16
+	WeightClass        uint16
+	XHeight, CapHeight int16
+	HasXHeight         bool
+}
+
+func (f *Font) OS2() (OS2Metrics, error) {
+	t, err := f.table("OS/2")
+	if err != nil {
+		return OS2Metrics{}, err
+	}
+	if len(t) < 6 {
+		return OS2Metrics{}, errors.New("OS/2 table too short")
+	}
+	m := OS2Metrics{
+		Version:     binary.BigEndian.Uint16(t[0:2]),
+		WeightClass: binary.BigEndian.Uint16(t[4:6]),
+	}
+	// sxHeight and sCapHeight were added in version 2; earlier versions
+	// don't carry them at all, and a short read here just means an old
+	// font, not a malformed one.
+	if m.Version >= 2 && len(t) >= 90 {
+		m.XHeight = int16(binary.BigEndian.Uint16(t[86:88]))
+		m.CapHeight = int16(binary.BigEndian.Uint16(t[88:90]))
+		m.HasXHeight = true
+	}
+	return m, nil
+}
+
+// weightClassNames maps the common usWeightClass values from the OS/2
+// spec to the names font tools usually show for them. Values outside
+// this table (fonts can use anything from 1 to 1000) are printed as
+// plain numbers.
+var weightClassNames = map[uint16]string{
+	100: "Thin",
+	200: "Extra Light",
+	300: "Light",
+	400: "Regular",
+	500: "Medium",
+	600: "Semi Bold",
+	700: "Bold",
+	800: "Extra Bold",
+	900: "Black",
+}
+
+// WeightClassName returns the human-readable name for a usWeightClass
+// value, or "" if it doesn't match one of the standard values.
+func WeightClassName(class uint16) string {
+	return weightClassNames[class]
+}
