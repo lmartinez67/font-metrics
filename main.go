@@ -56,6 +56,15 @@ func report(w io.Writer, f *Font) error {
 	}
 
 	fmt.Fprintf(w, "format:          %s\n", f.VersionString())
+	if f.HasTable("name") {
+		family, style := f.FamilyAndStyle()
+		if family != "" {
+			fmt.Fprintf(w, "family:          %s\n", family)
+		}
+		if style != "" {
+			fmt.Fprintf(w, "style:           %s\n", style)
+		}
+	}
 	fmt.Fprintf(w, "units per em:    %d\n", head.UnitsPerEm)
 	fmt.Fprintf(w, "ascender:        %d\n", hhea.Ascender)
 	fmt.Fprintf(w, "descender:       %d\n", hhea.Descender)

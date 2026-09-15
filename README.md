@@ -1,14 +1,15 @@
 # fontmetrics
 
 A command-line tool that reads the metrics baked into a TrueType or
-OpenType font file: units per em, ascender, descender, line gap, glyph
-count, the font's overall bounding box, and, when the font has an OS/2
-table, its weight class, x-height, and cap-height.
+OpenType font file: family and style name, units per em, ascender,
+descender, line gap, glyph count, the font's overall bounding box, and,
+when the font has an OS/2 table, its weight class, x-height, and
+cap-height.
 
-These numbers live in a font's binary tables (`head`, `hhea`, `maxp`,
-`OS/2`) and most tools only expose them through a GUI font inspector or a
-full font editor. `fontmetrics` just reads the tables and prints the
-numbers, which is what you actually want when you're debugging
+These numbers live in a font's binary tables (`name`, `head`, `hhea`,
+`maxp`, `OS/2`) and most tools only expose them through a GUI font
+inspector or a full font editor. `fontmetrics` just reads the tables and
+prints the numbers, which is what you actually want when you're debugging
 line-height math in CSS, comparing two font files, or writing a build
 script that needs to check a font before shipping it.
 
@@ -19,6 +20,8 @@ From a file:
 ```
 $ fontmetrics Inter-Regular.ttf
 format:          TrueType
+family:          Inter
+style:           Regular
 units per em:    2048
 ascender:        2005
 descender:       -462
@@ -29,6 +32,13 @@ weight class:    400 (Regular)
 x-height:        1118
 cap height:      1493
 ```
+
+The family and style lines only appear if the font has a `name` table and
+that table actually has a value for them, which is effectively always for
+real fonts. `fontmetrics` prefers the typographic family/subfamily names
+(IDs 16/17) when present, since those give the intended family grouping
+for fonts with many weights, and falls back to the legacy family/subfamily
+names (IDs 1/2) that every font is required to carry.
 
 The weight class, x-height, and cap-height lines only appear if the font
 has an `OS/2` table; x-height and cap-height specifically need an `OS/2`
@@ -58,15 +68,15 @@ Requires Go 1.22 or later. No third-party dependencies.
 Both TrueType and OpenType fonts use the same outer container, called
 sfnt: a short header naming how many tables the file has, followed by a
 directory of tag/offset/length triples, followed by the tables
-themselves. `fontmetrics` parses that directory and pulls the tables
-that carry the metrics above. It doesn't touch glyph outlines, kerning,
-or the tables that hold text like the font's name and license, so it
-works the same whether you're pointing it at a full desktop font or a
-subsetted webfont.
+themselves. `fontmetrics` parses that directory and pulls the tables that carry the
+metrics above, plus the family and style strings out of `name`. It
+doesn't touch glyph outlines, kerning, or the rest of `name`'s fifty-odd
+other fields (copyright, trademark, license URL, and so on), so it works
+the same whether you're pointing it at a full desktop font or a subsetted
+webfont.
 
 ## Limitations
 
-Right now it reads `head`, `hhea`, `maxp`, and `OS/2`. It doesn't yet
-read the `name` table (font family and style strings) or unwrap
-WOFF/WOFF2 compression. See the roadmap in the repo for what's planned
-next.
+Right now it reads `name`, `head`, `hhea`, `maxp`, and `OS/2`. It doesn't
+yet unwrap WOFF/WOFF2 compression, so it only works on plain TrueType and
+OpenType files. See the roadmap in the repo for what's planned next.
